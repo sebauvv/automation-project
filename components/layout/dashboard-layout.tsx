@@ -30,14 +30,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <header className="sticky top-0 flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-[#02335e80]">
+        <header className="sticky top-0 flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-[#6D8DAE]">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
           <div className="flex items-center gap-2">
             <h1 className="text-lg font-semibold text-white">Sistema de Horarios UNMSM</h1>
           </div>
         </header>
-        <main className="flex-1 p-6">{children}</main>
+        <main className="flex-1 p-6 bg-[#D9E7FF]">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   )
