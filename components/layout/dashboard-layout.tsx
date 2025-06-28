@@ -30,7 +30,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <header className="sticky top-0 flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-[#6D8DAE]">
+        <header className="sticky top-0 flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-[#6D8DAE] z-50">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
           <div className="flex items-center gap-2">

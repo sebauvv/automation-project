@@ -112,7 +112,7 @@ const MatriculaContent = () => {
       // const { seccionesSeleccionadas } = await response.json();
       
       // simulación de respuesta del backend con IDs de secciones aaaaa
-      const seccionesDelBackend = ['1', '4', '6', '11']; // IDs: 1, 2, 3, 4
+      const seccionesDelBackend = ['1', '4', '6', '11'];
       
       // aplica las selecciones del algoritmo
       aplicarSeleccionesAutomaticas(seccionesDelBackend);
