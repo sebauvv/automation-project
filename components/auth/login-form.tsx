@@ -23,15 +23,37 @@ export function LoginForm() {
     setLoading(true)
     setError("")
 
-    const user = login(codigo, password)
+    //const user = login(codigo, password)
 
-    if (user) {
-      router.push("/dashboard")
-    } else {
-      setError("Código o contraseña incorrectos")
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL
+      const response = await fetch(
+        `${apiUrl}/enrollments/student/code/${codigo}/info`
+      )
+
+      if (response.ok) {
+        const data = await response.json()
+        const userId = data.id
+        const userRole = data.role
+        // Guardar en localstoarge el user role
+        localStorage.setItem("userRole", userRole)
+        
+        // No validacion de contraseña btw
+        const user = await login(codigo, "123456", userId)
+        if (user) {
+          router.push("/dashboard")
+        } else {
+          setError("Código o contraseña incorrectos")
+        }
+      } else {
+        setError("Código o contraseña incorrectos")
+      }
+    } catch (err) {
+        setError("Error de conexión con el servidor")
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
+    
   }
 
   return (
