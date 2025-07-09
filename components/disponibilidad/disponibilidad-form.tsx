@@ -21,6 +21,17 @@ interface DisponibilidadSemanal {
   domingo: DisponibilidadDia;
 }
 
+// Interfaz para el API
+interface ApiAvailability {
+  day: string;
+  start_time: string;
+  end_time: string;
+}
+
+interface ApiAvailabilityRequest {
+  availabilities: ApiAvailability[];
+}
+
 const DisponibilidadForm: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<UserType | null>(null);
   const [availability, setAvailability] = useState<DisponibilidadSemanal>({
@@ -35,6 +46,8 @@ const DisponibilidadForm: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const daysLabels: Record<DiaSemana | 'domingo', string> = {
     lunes: 'Lunes',
@@ -50,7 +63,18 @@ const DisponibilidadForm: React.FC = () => {
     'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'
   ];
 
-  // Generar opciones de horas (8:00 AM - 10:00 PM)
+  const dayMapping: Record<DiaSemana | 'domingo', string> = {
+    lunes: 'monday',
+    martes: 'tuesday',
+    miercoles: 'wednesday',
+    jueves: 'thursday',
+    viernes: 'friday',
+    sabado: 'saturday',
+    domingo: 'sunday'
+  };
+
+
+
   const generateTimeOptions = (): string[] => {
     const options: string[] = [];
     for (let hour = 8; hour <= 22; hour++) {
@@ -62,20 +86,24 @@ const DisponibilidadForm: React.FC = () => {
 
   const timeOptions = generateTimeOptions();
 
-  // Cargar usuario actual y sus datos de disponibilidad
+  const clearMessages = () => {
+    setTimeout(() => {
+      setError(null);
+      setSuccess(null);
+    }, 5000);
+  };
+
+  // Cargar usuario actual
   useEffect(() => {
     const loadUserData = async () => {
       setIsLoading(true);
       try {
         const user = getCurrentUser();
         setCurrentUser(user);
-
-        if (user) {
-          // Cargar disponibilidad existente del usuario
-          await loadAvailabilityFromServer(user.id);
-        }
       } catch (error) {
         console.error('Error loading user data:', error);
+        setError('Error al cargar datos del usuario');
+        clearMessages();
       } finally {
         setIsLoading(false);
       }
@@ -84,49 +112,49 @@ const DisponibilidadForm: React.FC = () => {
     loadUserData();
   }, []);
 
-  // Función para cargar disponibilidad del servidor (placeholder)
-  const loadAvailabilityFromServer = async (id: string): Promise<void> => {
-    // TODO: Implementar llamada al API
-    /*
-    try {
-      const response = await fetch(`/api/availability/${id}`);
-      if (response.ok) {
-        const data = await response.json();
-        setAvailability(data);
-      }
-    } catch (error) {
-      console.error('Error loading availability:', error);
-    }
-    */
-  };
-
-  // Función para guardar en el servidor
   const saveAvailabilityToServer = async (data: DisponibilidadSemanal): Promise<void> => {
     if (!currentUser) return;
 
-    // TODO: Implementar llamada al API
-    /*
     try {
-      const response = await fetch(`/api/availability/${currentUser.id}`, {
+      const apiData: ApiAvailabilityRequest = {
+        availabilities: []
+      };
+
+      Object.entries(data).forEach(([dayKey, dayData]) => {
+        if (dayData.enabled) {
+          const apiDay = dayMapping[dayKey as DiaSemana | 'domingo'];
+          if (apiDay) {
+            apiData.availabilities.push({
+              day: apiDay,
+              start_time: dayData.start,
+              end_time: dayData.end
+            });
+          }
+        }
+      });
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/student/${currentUser.id}/availability`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          userId: currentUser.id,
-          availability: data,
-          timestamp: new Date().toISOString()
-        }),
+        body: JSON.stringify(apiData),
       });
       
       if (!response.ok) {
-        throw new Error('Error saving availability');
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || 'Error al guardar la disponibilidad');
       }
+
+      setSuccess('Disponibilidad guardada exitosamente');
+      clearMessages();
+
+      alert('Disponibilidad enviada exitosamente');
+      window.location.href = "/dashboard";
     } catch (error) {
       console.error('Error saving availability:', error);
       throw error;
     }
-    */
   };
 
   const handleTimeChange = (day: DiaSemana | 'domingo', type: 'start' | 'end', value: string): void => {
@@ -138,6 +166,8 @@ const DisponibilidadForm: React.FC = () => {
       }
     }));
     setHasChanges(true);
+    setError(null);
+    setSuccess(null);
   };
 
   const handleDayToggle = (day: DiaSemana | 'domingo'): void => {
@@ -149,19 +179,44 @@ const DisponibilidadForm: React.FC = () => {
       }
     }));
     setHasChanges(true);
+    setError(null);
+    setSuccess(null);
   };
 
   const handleSave = async (): Promise<void> => {
     if (!currentUser) return;
 
     setIsSaving(true);
+    setError(null);
+    setSuccess(null);
+
     try {
-      // Guardar disponibilidad en servidor
+      const hasEnabledDays = Object.values(availability).some(day => day.enabled);
+      if (!hasEnabledDays) {
+        setError('Debe seleccionar al menos un día de disponibilidad');
+        clearMessages();
+        return;
+      }
+
+      const invalidDays = Object.entries(availability).filter(([_, dayData]) => {
+        if (dayData.enabled) {
+          return dayData.start >= dayData.end;
+        }
+        return false;
+      });
+
+      if (invalidDays.length > 0) {
+        setError('Los horarios de inicio deben ser menores a los horarios de fin');
+        clearMessages();
+        return;
+      }
+
       await saveAvailabilityToServer(availability);
       setHasChanges(false);
     } catch (error) {
       console.error('Error saving availability:', error);
-      // Aquí podrías mostrar un toast de error
+      setError(error instanceof Error ? error.message : 'Error al guardar la disponibilidad');
+      clearMessages();
     } finally {
       setIsSaving(false);
     }
@@ -190,7 +245,6 @@ const DisponibilidadForm: React.FC = () => {
     return hour >= startHour && hour < endHour;
   };
 
-  // Determinar configuración basada en el rol
   const getRoleConfig = (role: UserRole) => {
     const configs = {
       alumno: {
@@ -206,7 +260,7 @@ const DisponibilidadForm: React.FC = () => {
         subtitle: 'Define tus horas laborales para asignación de secciones',
         icon: <User className="w-5 h-5" />,
         saveText: 'Confirmar Horario Laboral',
-        editable: true, // Aquí puedes agregar lógica para determinar si es editable según el ciclo
+        editable: true,
         showSemesterNote: true
       }
     };
@@ -240,6 +294,29 @@ const DisponibilidadForm: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto p-6 bg-white">
+      {/* Mensajes de estado */}
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-center gap-2 text-red-800">
+            <AlertCircle className="w-5 h-5" />
+            <span className="font-medium">Error:</span>
+            {error}
+          </div>
+        </div>
+      )}
+
+      {success && (
+        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-center gap-2 text-green-800">
+            <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+              <div className="w-2 h-2 bg-white rounded-full"></div>
+            </div>
+            <span className="font-medium">Éxito:</span>
+            {success}
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
