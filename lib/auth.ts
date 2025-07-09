@@ -11,12 +11,19 @@ function translateRole(role: string): "alumno" | "docente" {
 
 function mapApiUserToUser(apiUser: any, userId: any): User {
   const userRole = translateRole(localStorage.getItem("userRole")!)
+  let nombre = ""
+  let apellido = ""
+  if (apiUser.full_name) {
+    const parts = apiUser.full_name.trim().split(" ")
+    nombre = parts.slice(0, 2).join(" ")
+    apellido = parts.slice(2).join(" ")
+  }
 
   return {
     id: userId, 
     codigo: apiUser.code,
-    nombre: apiUser.full_name || "Nombre Test",
-    apellido: "Apellido Test", // xd
+    nombre,
+    apellido,
     email: apiUser.email,
     role: userRole, // :,v
     semestre: 7,
@@ -28,7 +35,7 @@ export const login = async (codigo: string, password: string, userId: any): Prom
   // Obtener data de usuario por userId
   const apiUrl = process.env.NEXT_PUBLIC_API_URL
   try {
-    const response = await fetch(`${apiUrl}/enrollments/student/${userId}/info`)
+    const response = await fetch(`${apiUrl}/student/${userId}/info`)
 
     if (!response.ok) return null
     const apiUser = await response.json()
