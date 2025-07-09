@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { getCurrentUser, getSemestreActual } from "@/lib/data"
 import { Calendar, Clock, GraduationCap, BookOpen, User, Award } from "lucide-react"
 import Link from "next/link"
+import { useEffect, useState } from "react"
 
 const alumnoFeatures = [
   {
@@ -57,6 +58,28 @@ const docenteFeatures = [
 export function DashboardContent() {
   const user = getCurrentUser()
   const semestre = getSemestreActual()
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
+  const [userRole, setUserRole] = useState<string | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+
+  const [enrollmentInfo, setEnrollmentInfo] = useState<{ cursos_matriculados: number; creditos_totales: number } | null>(null)
+
+  useEffect(() => {
+    const currentUser = localStorage.getItem("currentUser")
+    setCurrentUserId(currentUser ? JSON.parse(currentUser).id : null)
+    setUserRole(localStorage.getItem("userRole"))
+
+    if (user?.role === "alumno") {
+      fetch(`${apiUrl}/student/${currentUserId}/info`)
+        .then((res) => res.json())
+        .then((data) => setEnrollmentInfo({
+          cursos_matriculados: data.cursos_matriculados,
+          creditos_totales: data.creditos_totales
+        }))
+        .catch(() => setEnrollmentInfo({ cursos_matriculados: 0, creditos_totales: 0 }))
+    }
+  }, [user])
+
 
   if (!user) return null
 
@@ -136,7 +159,7 @@ export function DashboardContent() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ciclo Actual</CardTitle>
+            <CardTitle className="text-sm font-medium">Semestre Actual</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -152,7 +175,9 @@ export function DashboardContent() {
                 <BookOpen className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">0</div>
+                <div className="text-2xl font-bold">
+                  {enrollmentInfo ? enrollmentInfo.cursos_matriculados : "—"}
+                </div>
               </CardContent>
             </Card>
 
@@ -162,7 +187,9 @@ export function DashboardContent() {
                 <Award className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">0</div>
+                <div className="text-2xl font-bold">
+                  {enrollmentInfo ? enrollmentInfo.creditos_totales : "—"}
+                </div>
               </CardContent>
             </Card>
           </>

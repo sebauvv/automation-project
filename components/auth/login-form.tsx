@@ -28,7 +28,7 @@ export function LoginForm() {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL
       const response = await fetch(
-        `${apiUrl}/enrollments/student/code/${codigo}/info`
+        `${apiUrl}/student/code/${codigo}/info`
       )
 
       if (response.ok) {
